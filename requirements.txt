@@ -1,0 +1,24 @@
+# Context Window Impact Analysis Lab - Dependencies
+
+# Core dependencies
+numpy>=1.24.0
+pandas>=2.0.0
+
+# For visualization
+matplotlib>=3.7.0
+seaborn>=0.12.0
+
+# Real LLM integration (Ollama + LangChain)
+langchain>=0.1.0
+langchain-community>=0.0.20
+chromadb>=0.4.22
+sentence-transformers>=2.2.0
+requests>=2.31.0
+
+# For embeddings
+nomic>=1.0.0
+
+# Development dependencies (optional)
+jupyter>=1.0.0
+# pytest>=7.4.0
+
