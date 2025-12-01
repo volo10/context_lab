@@ -1,0 +1,34 @@
+# Include documentation files
+include README.md
+include LICENSE
+include INSTALL.md
+include QUICK_START.md
+include API_DOCUMENTATION.md
+include PROMPTS_DOCUMENTATION.md
+include RAG_SUCCESS_SUMMARY.md
+include REAL_LLM_GUIDE.md
+include START_HERE_REAL_LLM.txt
+include report_plan.md
+
+# Include configuration files
+include requirements.txt
+include pytest.ini
+include .gitignore
+
+# Include plot images
+recursive-include plots *.png
+
+# Include test files
+recursive-include tests *.py
+
+# Include example files
+include demo.py
+include visualize.py
+include notebook_template.ipynb
+
+# Exclude bytecode and cache
+global-exclude *.py[cod]
+global-exclude __pycache__
+global-exclude *.so
+global-exclude .DS_Store
+

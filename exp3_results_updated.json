@@ -1,0 +1,20 @@
+{
+  "full_context": {
+    "tokens": 5989,
+    "latency": 28.822604179382324,
+    "accuracy": 0.3333333333333333,
+    "response": "After analyzing the given text, I have found the following side effects associated with the medication \"\u05d0\u05d3\u05d5\u05d5\u05d9\u05dc\" (Advil) or \"\u05d0\u05d9\u05d1\u05d5\u05e4\u05e8\u05d5\u05e4\u05df\" (Ibuprofen) in the Hebrew context:\n\n1. \u05d2\u05de\u05d9\u05e9\u05d4 (Gamisha) - dizziness\n2. \u05de\u05d6\u05d2\u05ea (Mazigut) - nausea\n3. \u05de\u05db\u05d4 (Makah) - stomach pain\n4. \u05e4\u05dc\u05d0\u05d5\u05dd (Paleom) - headache\n5. \u05e9\u05d9\u05e2\u05d5\u05e8 (She'ur) - fatigue\n6. \u05ea\u05d7\u05dc\u05ea (Tachles) - joint pain\n7. \u05de\u05db\u05d4 (Makah) - stomach upset\n8. \u05d2\u05de\u05d9\u05e9\u05d4 (Gamisha) - dizziness\n9. \u05de\u05d6\u05d2\u05ea (Mazigut) - nausea\n10. \u05e4\u05dc\u05d0\u05d5\u05dd (Paleom) - headache\n\nPlease note that this list may not be exhaustive, and it is always best to consult with a medical professional for any concerns or questions you may have about medication side effects."
+  },
+  "rag": {
+    "tokens": 325,
+    "latency": 11.54720687866211,
+    "accuracy": 0.8333333333333334,
+    "response": "The medicine name \"\u05d0\u05d3\u05d5\u05d5\u05d9\u05dc\" (Advil) or \"\u05d0\u05d9\u05d1\u05d5\u05e4\u05e8\u05d5\u05e4\u05df\" (Ibuprofen) is mentioned in the Hebrew context. The sentence that lists side effects is:\n\n\u05de\u05d4\u05e0\u05d4 \u05ea\u05d5\u05e4\u05e2\u05d5\u05ea \u05d4\u05dc\u05d5\u05d5\u05d0\u05d9 \u05e9\u05dc \u05d0\u05d3\u05d5\u05d5\u05d9\u05dc: \u05d1\u05d7\u05d9\u05dc\u05d5\u05ea, \u05e6\u05e8\u05d1\u05ea \u05d5\u05e1\u05d7\u05e8\u05d7\u05d5\u05e8\u05ea \u05d1\u05db-10% \u05de\u05d4\u05de\u05d8\u05d5\u05e4\u05dc\u05d9\u05dd.\n\nThe side effects mentioned are:\n\n* \u05d1\u05d7\u05d9\u05dc\u05d5\u05ea (nausea)\n* \u05e6\u05e8\u05d1\u05ea (diarrhea)\n* \u05e1\u05d7\u05e8\u05d7\u05d5\u05e8\u05ea (vomiting) in up to 10% of patients."
+  },
+  "comparison": {
+    "speedup": 2.49606718596539,
+    "token_reduction_pct": 94.57338453832025,
+    "accuracy_improvement_pct": 150.0
+  },
+  "expected_outcome": "RAG should be faster and more accurate than Full Context"
+}
