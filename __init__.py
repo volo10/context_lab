@@ -30,13 +30,12 @@ from .context_lab import (
     
     # Experiment functions
     experiment1_needle_in_haystack,
-    experiment2_context_window_size,
+    experiment2_context_size_impact,
     experiment3_rag_vs_full_context,
     experiment4_context_strategies,
     
     # Classes
     SimpleVectorStore,
-    ContextAgent,
     
     # Utilities
     get_llm,
@@ -73,13 +72,12 @@ __all__ = [
     
     # Experiment functions
     "experiment1_needle_in_haystack",
-    "experiment2_context_window_size",
+    "experiment2_context_size_impact",
     "experiment3_rag_vs_full_context",
     "experiment4_context_strategies",
     
     # Classes
     "SimpleVectorStore",
-    "ContextAgent",
     
     # Utilities
     "get_llm",

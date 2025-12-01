@@ -3,7 +3,7 @@
 import pytest
 from context_lab import (
     experiment1_needle_in_haystack,
-    experiment2_context_window_size,
+    experiment2_context_size_impact,
     experiment3_rag_vs_full_context,
     experiment4_context_strategies,
 )
@@ -44,20 +44,20 @@ class TestExperiment2:
     
     def test_basic_execution(self):
         """Test basic experiment execution."""
-        results = experiment2_context_window_size(
+        results = experiment2_context_size_impact(
             doc_counts=[2, 5],
             use_real_llm=False
         )
-        assert isinstance(results, list)
-        assert len(results) == 2
+        assert isinstance(results, dict)
+        assert "results" in results
     
     def test_result_structure(self):
         """Test that each result has required keys."""
-        results = experiment2_context_window_size(
+        results = experiment2_context_size_impact(
             doc_counts=[2, 5],
             use_real_llm=False
         )
-        for result in results:
+        for result in results["results"]:
             assert "num_docs" in result
             assert "tokens_used" in result
             assert "latency" in result
@@ -65,21 +65,21 @@ class TestExperiment2:
     
     def test_increasing_doc_counts(self):
         """Test with increasing document counts."""
-        results = experiment2_context_window_size(
+        results = experiment2_context_size_impact(
             doc_counts=[2, 5, 10],
             use_real_llm=False
         )
         # Token count should generally increase
-        tokens = [r["tokens_used"] for r in results]
+        tokens = [r["tokens_used"] for r in results["results"]]
         assert tokens[0] < tokens[-1]
     
     def test_metrics_validity(self):
         """Test that all metrics are valid."""
-        results = experiment2_context_window_size(
+        results = experiment2_context_size_impact(
             doc_counts=[2],
             use_real_llm=False
         )
-        result = results[0]
+        result = results["results"][0]
         assert result["num_docs"] > 0
         assert result["tokens_used"] > 0
         assert result["latency"] >= 0
@@ -150,7 +150,7 @@ class TestExperiment4:
     def test_basic_execution(self):
         """Test basic experiment execution."""
         results = experiment4_context_strategies(
-            num_actions=3,
+            num_steps=3,
             use_real_llm=False
         )
         assert isinstance(results, dict)
@@ -159,7 +159,7 @@ class TestExperiment4:
     def test_strategy_names(self):
         """Test that all strategies are present."""
         results = experiment4_context_strategies(
-            num_actions=3,
+            num_steps=3,
             use_real_llm=False
         )
         strategies = results["strategies"]
@@ -171,7 +171,7 @@ class TestExperiment4:
     def test_strategy_metrics(self):
         """Test that each strategy has required metrics."""
         results = experiment4_context_strategies(
-            num_actions=3,
+            num_steps=3,
             use_real_llm=False
         )
         for strategy_name, metrics in results["strategies"].items():
@@ -184,9 +184,9 @@ class TestExperiment4:
     
     def test_action_count(self):
         """Test with different action counts."""
-        for num_actions in [2, 5, 10]:
+        for num_steps in [2, 5, 10]:
             results = experiment4_context_strategies(
-                num_actions=num_actions,
+                num_steps=num_steps,
                 use_real_llm=False
             )
             assert "strategies" in results
@@ -201,13 +201,13 @@ class TestExperimentIntegration:
         exp1 = experiment1_needle_in_haystack(num_docs=3, use_real_llm=False)
         assert exp1 is not None
         
-        exp2 = experiment2_context_window_size(doc_counts=[2], use_real_llm=False)
+        exp2 = experiment2_context_size_impact(doc_counts=[2], use_real_llm=False)
         assert exp2 is not None
         
         exp3 = experiment3_rag_vs_full_context(num_docs=5, use_real_llm=False)
         assert exp3 is not None
         
-        exp4 = experiment4_context_strategies(num_actions=2, use_real_llm=False)
+        exp4 = experiment4_context_strategies(num_steps=2, use_real_llm=False)
         assert exp4 is not None
     
     def test_reproducibility(self):
