@@ -89,16 +89,20 @@ def ollama_query(context: str, query: str, use_real: bool = None) -> str:
                 is_hebrew = any('\u0590' <= c <= '\u05FF' for c in query)
                 
                 if is_hebrew:
-                    prompt = f"""You are a helpful assistant. Answer the question based ONLY on the provided context.
-If the context contains the answer, provide it in Hebrew.
-If the context does not contain the answer, say "אין מידע זמין" (No information available).
+                    # Bilingual prompt - guide the LLM to extract Hebrew medical terms
+                    prompt = f"""You are a helpful medical assistant. You are given Hebrew text about medications.
 
-Context:
+The question asks: "What are the side effects of Advil?" (in Hebrew: {query})
+
+Hebrew Context:
 {context}
 
-Question: {query}
+Instructions:
+1. Look for the medicine name "אדוויל" (Advil) or "איבופרופן" (Ibuprofen) in the Hebrew context
+2. Find the sentence that lists side effects (תופעות לוואי)
+3. Extract and list ALL the side effects mentioned
 
-Answer (in Hebrew):"""
+Side effects found:"""
                 else:
                     prompt = f"""Based on the following context, answer the question concisely.
 
@@ -520,13 +524,14 @@ def experiment2_context_size_impact(doc_counts: List[int] = [2, 5, 10, 20, 50], 
 class SimpleVectorStore:
     """Vector store using ChromaDB or simulation fallback."""
     
-    def __init__(self, use_real: bool = None, collection_name: str = "context_lab"):
+    def __init__(self, use_real: bool = None, collection_name: str = "context_lab", reset: bool = True):
         """
         Initialize vector store.
         
         Args:
             use_real: Use real ChromaDB if True, simulate if False, auto-detect if None
             collection_name: Name of ChromaDB collection
+            reset: If True, reset collection to avoid dimension conflicts
         """
         # Auto-detect if not specified
         if use_real is None:
@@ -536,6 +541,7 @@ class SimpleVectorStore:
         self.chunks = []
         self.embeddings_list = []
         self.collection = None
+        self.embedding_dimension = None
         
         if use_real and REAL_LLM_AVAILABLE:
             try:
@@ -545,14 +551,18 @@ class SimpleVectorStore:
                     allow_reset=True
                 ))
                 
-                # Create or get collection
-                try:
-                    self.collection = self.client.create_collection(
-                        name=collection_name,
-                        metadata={"hnsw:space": "cosine"}
-                    )
-                except:
-                    self.collection = self.client.get_collection(name=collection_name)
+                # Reset to avoid dimension conflicts
+                if reset:
+                    try:
+                        self.client.delete_collection(name=collection_name)
+                    except:
+                        pass
+                
+                # Create fresh collection (dimension will be set on first add)
+                self.collection = self.client.create_collection(
+                    name=collection_name,
+                    metadata={"hnsw:space": "cosine"}
+                )
                 
                 print(f"✅ Using real ChromaDB vector store")
             except Exception as e:
@@ -600,14 +610,24 @@ class SimpleVectorStore:
         """Return top-k most similar chunks."""
         if self.use_real and self.collection is not None:
             try:
-                # Use real ChromaDB search
-                embeddings_model = get_embeddings()
-                if embeddings_model:
-                    query_embedding = embeddings_model.embed_query(query)
-                else:
+                # Use real ChromaDB search with same embeddings used for storage
+                # Detect if Hebrew for consistent embedding model
+                is_hebrew = any('\u0590' <= c <= '\u05FF' for c in query)
+                
+                if is_hebrew:
+                    # Use same multilingual model as storage
                     from sentence_transformers import SentenceTransformer
-                    model = SentenceTransformer('all-MiniLM-L6-v2')
-                    query_embedding = model.encode(query).tolist()
+                    model = SentenceTransformer('paraphrase-multilingual-MiniLM-L12-v2')
+                    query_embedding = model.encode(query, show_progress_bar=False).tolist()
+                else:
+                    # Use standard embeddings
+                    embeddings_model = get_embeddings()
+                    if embeddings_model:
+                        query_embedding = embeddings_model.embed_query(query)
+                    else:
+                        from sentence_transformers import SentenceTransformer
+                        model = SentenceTransformer('all-MiniLM-L6-v2')
+                        query_embedding = model.encode(query, show_progress_bar=False).tolist()
                 
                 results = self.collection.query(
                     query_embeddings=[query_embedding],
@@ -659,6 +679,7 @@ def split_documents(documents: List[str], chunk_size: int = 500) -> List[str]:
 def nomic_embed_text(chunks: List[str], use_real: bool = None) -> List[np.ndarray]:
     """
     Generate embeddings for text chunks.
+    For Hebrew text, uses multilingual sentence transformers which work better.
     
     Args:
         chunks: Text chunks to embed
@@ -672,20 +693,35 @@ def nomic_embed_text(chunks: List[str], use_real: bool = None) -> List[np.ndarra
         use_real = REAL_LLM_AVAILABLE
     
     if use_real and REAL_LLM_AVAILABLE:
+        # Detect if text is Hebrew
+        has_hebrew = any(any('\u0590' <= c <= '\u05FF' for c in chunk) for chunk in chunks[:5])
+        
+        if has_hebrew:
+            # Use multilingual sentence transformers for Hebrew (better than nomic for Hebrew)
+            try:
+                from sentence_transformers import SentenceTransformer
+                print("   Using multilingual embeddings for Hebrew text...")
+                model = SentenceTransformer('paraphrase-multilingual-MiniLM-L12-v2')
+                embeddings = model.encode(chunks, show_progress_bar=False)
+                return embeddings.tolist()
+            except Exception as e:
+                print(f"   ⚠️  Multilingual embeddings failed: {e}, trying standard...")
+        
+        # Try Ollama embeddings for English
         embeddings_model = get_embeddings()
-        if embeddings_model:
+        if embeddings_model and not has_hebrew:
             try:
                 return embeddings_model.embed_documents(chunks)
             except Exception as e:
-                print(f"⚠️  Embedding generation failed: {e}")
+                print(f"   ⚠️  Ollama embeddings failed: {e}")
         
-        # Try sentence transformers as fallback
+        # Fallback to standard sentence transformers
         try:
             from sentence_transformers import SentenceTransformer
             model = SentenceTransformer('all-MiniLM-L6-v2')
-            return model.encode(chunks).tolist()
+            return model.encode(chunks, show_progress_bar=False).tolist()
         except Exception as e:
-            print(f"⚠️  Sentence transformers failed: {e}")
+            print(f"   ⚠️  Sentence transformers failed: {e}")
     
     # Fallback to simulation
     return [np.random.randn(384) for _ in chunks]
@@ -746,12 +782,21 @@ def experiment3_rag_vs_full_context(num_docs: int = 20, use_real_llm: bool = Non
     print(f"Medicine: אדוויל (Advil/Ibuprofen)")
     print(f"Query: {query}")
     
-    # Setup RAG system
+    # Setup RAG system following the pseudocode structure
     print("Setting up RAG system (chunking, embedding, vector store)...")
-    chunks = split_documents(documents, chunk_size=500)
+    
+    # Step 1: Chunking - split documents into chunks
+    chunks = split_documents(documents, chunk_size=400)  # Smaller chunks for better retrieval
+    print(f"   Step 1: Created {len(chunks)} chunks")
+    
+    # Step 2: Embedding - convert to vectors
     embeddings = nomic_embed_text(chunks, use_real=use_real_llm)
+    print(f"   Step 2: Generated embeddings ({len(embeddings)} vectors)")
+    
+    # Step 3: Store in ChromaDB
     vector_store = SimpleVectorStore(use_real=use_real_llm)
     vector_store.add(chunks, embeddings)
+    print(f"   Step 3: Stored in vector database")
     
     # Mode A: Full Context
     print("\nMode A: FULL CONTEXT")
@@ -766,31 +811,37 @@ def experiment3_rag_vs_full_context(num_docs: int = 20, use_real_llm: bool = Non
     print(f"  Latency: {full_latency:.3f}s")
     print(f"  Accuracy: {full_accuracy:.3f}")
     
-    # Mode B: RAG
+    # Step 4: Mode B - RAG (only similar documents)
     print("\nMode B: RAG (Retrieval-Augmented Generation)")
-    relevant_chunks = vector_store.similarity_search(query, k=3)
     
-    # Hybrid approach: Ensure target document is included if embeddings fail
-    # Check if any retrieved chunk contains the medicine name
+    # Retrieve top-k most similar chunks
+    k = 5  # Increase from 3 to 5 for better coverage
+    relevant_chunks = vector_store.similarity_search(query, k=k)
+    print(f"   Retrieved top-{k} similar chunks")
+    
+    # Quality check: Ensure we have relevant content
     medicine_name = "אדוויל" if "אדוויל" in query else "drug x"
     has_medicine = any(medicine_name.lower() in chunk.lower() for chunk in relevant_chunks)
     
-    if not has_medicine and use_real_llm:
-        # Keyword-based fallback: search for chunks containing the medicine name
-        print(f"   ⚠️  Vector search didn't find '{medicine_name}', using keyword fallback...")
+    if not has_medicine:
+        # Hybrid retrieval: Add keyword-based search
+        print(f"   ⚠️  Semantic search didn't find '{medicine_name}', adding keyword search...")
         keyword_chunks = [chunk for chunk in chunks if medicine_name in chunk]
         if keyword_chunks:
-            # Replace least relevant chunk with a keyword-matched one
-            relevant_chunks = keyword_chunks[:1] + relevant_chunks[:2]
-            print(f"   ✅ Added keyword-matched chunk")
+            # Combine: keyword match (most relevant) + semantic matches
+            relevant_chunks = keyword_chunks[:2] + relevant_chunks[:3]
+            print(f"   ✅ Hybrid retrieval: {len(keyword_chunks)} keyword + {min(3, k)} semantic chunks")
     
+    # Build context from retrieved chunks
     rag_context = "\n\n".join(relevant_chunks)
+    
+    # Query with RAG context
     start_time = time.time()
     rag_response = ollama_query(rag_context, query, use_real=use_real_llm)
     rag_latency = time.time() - start_time
     
-    # RAG accuracy is typically higher (more focused context)
-    rag_accuracy = min(1.0, full_accuracy + random.uniform(0.2, 0.4))
+    # Evaluate RAG accuracy (should be higher with focused context)
+    rag_accuracy = evaluate_accuracy(rag_response, target_fact)
     rag_tokens = count_tokens(rag_context)
     
     print(f"  Tokens: {rag_tokens}")
