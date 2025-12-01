@@ -29,9 +29,9 @@ wheels/
 
 # Results and outputs
 context_lab_results.json
-*.json
-plots/
-*.png
+results/*.json
+# plots/ - Now included in repo
+# *.png - Now included in repo
 *.pdf
 
 # IDEs
