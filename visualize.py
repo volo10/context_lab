@@ -233,10 +233,10 @@ def plot_experiment4(results, output_dir='plots'):
     
     # Multi-panel comparison
     fig, axes = plt.subplots(2, 2, figsize=(14, 10))
-    fig.suptitle('Experiment 4: Context Strategy Comparison', 
+    fig.suptitle('Experiment 4: Context Strategy Comparison',
                  fontsize=16, weight='bold', y=1.00)
-    
-    colors = ['#1f77b4', '#ff7f0e', '#2ca02c']
+
+    colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728']  # 4 colors for 4 strategies
     
     # Accuracy
     axes[0, 0].bar(range(len(df)), df['Avg Accuracy'], color=colors, 

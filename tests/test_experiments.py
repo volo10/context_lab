@@ -11,32 +11,33 @@ from context_lab import (
 
 class TestExperiment1:
     """Tests for Experiment 1: Needle in Haystack."""
-    
+
     def test_basic_execution(self):
         """Test basic experiment execution."""
         results = experiment1_needle_in_haystack(num_docs=3, use_real_llm=False)
         assert isinstance(results, dict)
-        assert "position_accuracy" in results
-        assert "average_latency" in results
-    
+        assert "summary" in results
+        assert "detailed_results" in results
+
     def test_position_accuracy_keys(self):
         """Test that all position keys are present."""
         results = experiment1_needle_in_haystack(num_docs=3, use_real_llm=False)
-        positions = results["position_accuracy"]
-        assert "START" in positions
-        assert "MIDDLE" in positions
-        assert "END" in positions
-    
+        summary = results["summary"]
+        assert "start" in summary
+        assert "middle" in summary
+        assert "end" in summary
+
     def test_accuracy_range(self):
         """Test that accuracy values are in valid range."""
         results = experiment1_needle_in_haystack(num_docs=3, use_real_llm=False)
-        for position, accuracy in results["position_accuracy"].items():
-            assert 0.0 <= accuracy <= 1.0
-    
+        for position, stats in results["summary"].items():
+            assert 0.0 <= stats["avg_accuracy"] <= 1.0
+
     def test_latency_positive(self):
         """Test that latency is positive."""
         results = experiment1_needle_in_haystack(num_docs=3, use_real_llm=False)
-        assert results["average_latency"] >= 0
+        for position, stats in results["summary"].items():
+            assert stats["avg_latency"] >= 0
 
 
 class TestExperiment2:
@@ -146,7 +147,7 @@ class TestExperiment3:
 
 class TestExperiment4:
     """Tests for Experiment 4: Context Engineering Strategies."""
-    
+
     def test_basic_execution(self):
         """Test basic experiment execution."""
         results = experiment4_context_strategies(
@@ -154,34 +155,36 @@ class TestExperiment4:
             use_real_llm=False
         )
         assert isinstance(results, dict)
-        assert "strategies" in results
-    
+        assert "results" in results
+
     def test_strategy_names(self):
         """Test that all strategies are present."""
         results = experiment4_context_strategies(
             num_steps=3,
             use_real_llm=False
         )
-        strategies = results["strategies"]
-        assert "BASELINE" in strategies
-        assert "SELECT" in strategies
-        assert "COMPRESS" in strategies
-        assert "WRITE" in strategies
-    
+        strategy_results = results["results"]
+        # Strategy names include descriptive suffixes
+        strategy_names = list(strategy_results.keys())
+        assert any("SELECT" in name for name in strategy_names)
+        assert any("COMPRESS" in name for name in strategy_names)
+        assert any("WRITE" in name for name in strategy_names)
+        assert any("ISOLATE" in name for name in strategy_names)
+
     def test_strategy_metrics(self):
         """Test that each strategy has required metrics."""
         results = experiment4_context_strategies(
             num_steps=3,
             use_real_llm=False
         )
-        for strategy_name, metrics in results["strategies"].items():
+        for strategy_name, metrics in results["results"].items():
             assert "avg_latency" in metrics
             assert "avg_accuracy" in metrics
             assert "avg_tokens" in metrics
             assert metrics["avg_latency"] >= 0
             assert 0.0 <= metrics["avg_accuracy"] <= 1.0
             assert metrics["avg_tokens"] >= 0
-    
+
     def test_action_count(self):
         """Test with different action counts."""
         for num_steps in [2, 5, 10]:
@@ -189,36 +192,36 @@ class TestExperiment4:
                 num_steps=num_steps,
                 use_real_llm=False
             )
-            assert "strategies" in results
+            assert "results" in results
             # Should complete without errors
 
 
 class TestExperimentIntegration:
     """Integration tests across all experiments."""
-    
+
     def test_all_experiments_run(self):
         """Test that all experiments can run in sequence."""
         exp1 = experiment1_needle_in_haystack(num_docs=3, use_real_llm=False)
         assert exp1 is not None
-        
+
         exp2 = experiment2_context_size_impact(doc_counts=[2], use_real_llm=False)
         assert exp2 is not None
-        
+
         exp3 = experiment3_rag_vs_full_context(num_docs=5, use_real_llm=False)
         assert exp3 is not None
-        
+
         exp4 = experiment4_context_strategies(num_steps=2, use_real_llm=False)
         assert exp4 is not None
-    
+
     def test_reproducibility(self):
         """Test that experiments produce consistent structure (not necessarily same values)."""
         # Run experiment twice
         results1 = experiment1_needle_in_haystack(num_docs=3, use_real_llm=False)
         results2 = experiment1_needle_in_haystack(num_docs=3, use_real_llm=False)
-        
+
         # Should have same structure
         assert results1.keys() == results2.keys()
-        assert results1["position_accuracy"].keys() == results2["position_accuracy"].keys()
+        assert results1["summary"].keys() == results2["summary"].keys()
 
 
 if __name__ == "__main__":

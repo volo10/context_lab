@@ -8,8 +8,8 @@ This lab implements four experiments:
 
 1. **Needle in Haystack**: Demonstrates "Lost in the Middle" phenomenon
 2. **Context Window Size Impact**: Analyzes accuracy/latency vs context size
-3. **RAG vs Full Context**: Compares Retrieval-Augmented Generation with full context
-4. **Context Engineering Strategies**: Benchmarks SELECT, COMPRESS, and WRITE strategies
+3. **RAG vs Full Context**: Compares Retrieval-Augmented Generation with full context (Hebrew multi-domain)
+4. **Context Engineering Strategies**: Benchmarks SELECT, COMPRESS, WRITE, and ISOLATE strategies
 
 ## Installation
 
@@ -68,11 +68,23 @@ python context_lab.py --no-save
 
 ```python
 from context_lab import (
+    # Experiment functions
     experiment1_needle_in_haystack,
     experiment2_context_size_impact,
     experiment3_rag_vs_full_context,
     experiment4_context_strategies,
-    run_all_experiments
+
+    # Strategy classes (for custom implementations)
+    SelectStrategy,
+    CompressStrategy,
+    WriteStrategy,
+    IsolateStrategy,
+
+    # Core utilities
+    generate_filler_text,
+    split_documents,
+    evaluate_accuracy,
+    SimpleVectorStore,
 )
 
 # Run individual experiments
@@ -82,10 +94,31 @@ results3 = experiment3_rag_vs_full_context(num_docs=20)
 results4 = experiment4_context_strategies(num_steps=10)
 
 # Or run all at once
+from context_lab.context_lab import run_all_experiments
 all_results = run_all_experiments(save_results=True, output_file="results.json")
 ```
 
 ### Generate Visualizations
+
+**Option 1: Use the built-in visualization script**
+
+```bash
+# First run experiments to generate results
+python context_lab.py
+
+# Then generate all plots
+python visualize.py
+```
+
+This generates plots in the `plots/` directory:
+- `exp1_needle_in_haystack.png` - Accuracy by position graph
+- `exp2_context_size_impact.png` - Latency vs size graph
+- `exp2_tokens_vs_accuracy.png` - Token count vs accuracy scatter
+- `exp3_rag_vs_full.png` - RAG vs Full Context comparison
+- `exp3_rag_improvements.png` - RAG improvement metrics radar chart
+- `exp4_strategy_comparison.png` - Strategy performance table (4 strategies)
+
+**Option 2: Custom visualization in Python**
 
 ```python
 import matplotlib.pyplot as plt
@@ -138,17 +171,18 @@ plt.show()
 
 ### Experiment 4: Context Engineering Strategies
 
-**Goal**: Benchmark three strategies for multi-step conversations.
+**Goal**: Benchmark four strategies for multi-step conversations.
 
 **Parameters**:
 - `num_steps`: Length of conversation (default: 10)
 
 **Strategies**:
-- **SELECT**: RAG search on history
-- **COMPRESS**: Summarize when exceeding token limit
-- **WRITE**: External memory for key facts
+- **SELECT**: RAG search on history to retrieve relevant past interactions
+- **COMPRESS**: Summarize history when exceeding token limit
+- **WRITE**: External memory/scratchpad for key facts only
+- **ISOLATE**: Separate context into compartments by action type to prevent context pollution
 
-**Expected Outcome**: SELECT or WRITE maintains best accuracy
+**Expected Outcome**: SELECT or WRITE maintains best accuracy over time
 
 ## Integration with Real LLMs
 
@@ -267,12 +301,58 @@ plt.show()
 
 ```
 context_lab/
-├── context_lab.py          # Main implementation
-├── report_plan.md          # Analysis plan and expected results
-├── requirements.txt        # Python dependencies
-├── README.md              # This file
-└── context_lab_results.json  # Generated results (after running)
+├── src/                    # NEW: Modular core package
+│   ├── __init__.py         # Package exports
+│   ├── llm.py              # LLM interface (Ollama, embeddings)
+│   ├── utils.py            # Text generation, document utilities
+│   ├── vector_store.py     # ChromaDB wrapper with fallback
+│   ├── strategies.py       # Context engineering strategies
+│   └── experiments.py      # Four main experiments
+├── tests/
+│   ├── __init__.py
+│   ├── test_core_functions.py   # Unit tests for core functions
+│   ├── test_experiments.py      # Integration tests for experiments
+│   └── test_src_modules.py      # Tests for src/ modules
+├── docs/                   # Documentation
+│   ├── PRD.md              # Product Requirements Document
+│   ├── ARCHITECTURE.md     # C4 Model Architecture
+│   ├── COST_ANALYSIS.md    # Token economics analysis
+│   └── PROMPT_ENGINEERING.md # Prompt patterns guide
+├── config/                 # Configuration files
+├── plots/                  # Generated visualizations
+├── __init__.py             # Package exports
+├── context_lab.py          # CLI entry point (thin wrapper)
+├── visualize.py            # Visualization/plotting functions
+├── PROJECT_SUMMARY.md      # Comprehensive project summary
+├── setup.py                # Package setup
+└── requirements.txt        # Python dependencies
 ```
+
+## Running Tests
+
+Run the complete test suite:
+
+```bash
+# Run all tests
+pytest tests/ -v
+
+# Run with coverage report
+pytest tests/ --cov=src --cov-report=term-missing
+
+# Run only core function tests
+pytest tests/test_core_functions.py -v
+
+# Run only experiment tests
+pytest tests/test_experiments.py -v
+
+# Run src module tests
+pytest tests/test_src_modules.py -v
+```
+
+Current test coverage (113 tests, 74%+ coverage):
+- **56 core function tests**: generate_filler_text, embed_critical_fact, split_documents, count_tokens, evaluate_accuracy, SimpleVectorStore
+- **19 experiment tests**: All 4 experiments with integration tests
+- **38 src module tests**: LLM interface, utilities, vector store, strategies
 
 ## Troubleshooting
 
@@ -373,9 +453,14 @@ def generate_filler_text_hebrew(num_words: int = 200) -> str:
 To extend this lab:
 
 1. **Add New Experiments**: Create functions following the naming pattern `experimentN_description()`
-2. **Add Strategies**: Subclass `ContextStrategy` for new context management approaches
+2. **Add Strategies**: Subclass `ContextStrategy` for new context management approaches. Current strategies:
+   - `SelectStrategy` - RAG-based retrieval
+   - `CompressStrategy` - Summarization-based compression
+   - `WriteStrategy` - External memory/scratchpad
+   - `IsolateStrategy` - Compartment-based isolation
 3. **Improve Evaluation**: Enhance `evaluate_accuracy()` with better metrics
 4. **Add Visualizations**: See `report_plan.md` for plotting templates
+5. **Run Tests**: Use `pytest tests/ -v` to run all unit tests (60 tests)
 
 ## Citation
 
@@ -410,12 +495,22 @@ For issues or questions:
 
 ## Roadmap
 
+Completed:
+- [x] Implement all 4 context strategies (SELECT, COMPRESS, WRITE, ISOLATE)
+- [x] Add Hebrew/multilingual document support (Experiment 3)
+- [x] Comprehensive unit test suite (113 tests, 74%+ coverage)
+- [x] Visualization generation scripts
+- [x] **NEW: Modular src/ package architecture**
+- [x] **NEW: Python logging framework**
+- [x] **NEW: Cost analysis documentation**
+- [x] **NEW: Prompt engineering guide**
+- [x] **NEW: C4 Architecture documentation**
+- [x] **NEW: Product Requirements Document (PRD)**
+
 Future enhancements:
 - [ ] Add support for more LLM providers (OpenAI, Anthropic, Cohere)
 - [ ] Implement more context strategies (hierarchical memory, sliding window)
-- [ ] Add multi-language support
 - [ ] Create interactive Jupyter notebook version
 - [ ] Add real-time visualization dashboard
 - [ ] Implement A/B testing framework
-- [ ] Add cost tracking and optimization
 

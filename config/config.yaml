@@ -1,0 +1,55 @@
+# Context Lab Configuration
+# ==========================
+# Copy this file to config.local.yaml and modify as needed
+
+# LLM Settings
+llm:
+  provider: "ollama"  # Options: ollama, openai, anthropic
+  model: "llama2"     # Model name to use
+  temperature: 0.1    # Lower = more deterministic
+  timeout: 60         # Request timeout in seconds
+
+# Embedding Settings
+embeddings:
+  provider: "ollama"
+  model: "nomic-embed-text"  # For English
+  multilingual_model: "paraphrase-multilingual-MiniLM-L12-v2"  # For Hebrew
+
+# ChromaDB Settings
+vectorstore:
+  type: "chromadb"
+  collection_name: "context_lab"
+  persist_directory: null  # null = in-memory, or path for persistence
+
+# Experiment Defaults
+experiments:
+  experiment1:
+    num_docs: 5
+    words_per_doc: 200
+    positions: ["start", "middle", "end"]
+
+  experiment2:
+    doc_counts: [2, 5, 10, 20, 50]
+    words_per_doc: 200
+
+  experiment3:
+    num_docs: 20
+    chunk_size: 400
+    retrieval_k: 5
+    domains: ["medical_hebrew", "tech_hebrew", "legal_hebrew"]
+
+  experiment4:
+    num_steps: 10
+    strategies: ["SELECT", "COMPRESS", "WRITE", "ISOLATE"]
+    token_limit: 2000
+
+# Output Settings
+output:
+  results_file: "context_lab_results.json"
+  plots_directory: "plots"
+  save_results: true
+
+# Logging
+logging:
+  level: "INFO"  # DEBUG, INFO, WARNING, ERROR
+  file: null     # null = stdout only, or path for file logging
